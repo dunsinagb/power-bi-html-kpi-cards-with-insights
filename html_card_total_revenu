@@ -2,195 +2,71 @@ createOrReplace
 
 	ref table 'Dax Measures'
 
-		measure html_card_total_revenue = ```
+		measure html_card_discount = ```
 				
-				VAR Revenue = [Total Sales CY]
-				VAR PYRevenue = [Total Sales LY]
-				VAR YoYGrowth = [Total Sales Growth %]
-				VAR CAGR = [revenue_cagr]
+				VAR CYValue = [Total Discount Applied CY]
+				VAR PYValue = [Total Discount Applied LY]
+				VAR YoYGrowth = DIVIDE(CYValue - PYValue, PYValue, 0)
 				
-				-- Calculate period growth (month-over-month by default)
+				-- MOM Calculation
 				VAR PeriodGrowth = 
-				    VAR PrevPeriod = 
-				        CALCULATE(
-				            [Total Sales CY],
-				            DATEADD('Business Dates'[Date], -1, MONTH)
-				        )
-				    RETURN
-				        DIVIDE(Revenue - PrevPeriod, PrevPeriod, 0)
-				-- Dynamic insight based on growth
-				VAR GrowthInsight = 
-				    SWITCH(
-				        TRUE(),
-				        YoYGrowth > 0.15, "Strong year-over-year momentum with " & FORMAT(YoYGrowth, "+0.0%") & " growth. Revenue trajectory significantly ahead of prior year.",
-				        YoYGrowth > 0.05, "Solid growth trajectory at " & FORMAT(YoYGrowth, "+0.0%") & " YoY. Performance tracking above market expectations.",
-				        YoYGrowth > -0.05, "Revenue relatively flat YoY (" & FORMAT(YoYGrowth, "0.0%") & "). Monitor for trend reversals and seasonal patterns.",
-				        "Revenue declining " & FORMAT(YoYGrowth, "0.0%") & " YoY. Immediate attention required to identify root causes and implement corrective measures."
-				    )
-				-- Period context (shows which time period we're looking at)
-				VAR MinDate = MIN('Business Dates'[Date])
-				VAR MaxDate = MAX('Business Dates'[Date])
-				VAR PeriodLabel = 
-				    IF(
-				        DATEDIFF(MinDate, MaxDate, DAY) <= 31,
-				        FORMAT(MinDate, "MMM YYYY"),
-				        FORMAT(MinDate, "MMM YYYY") & " – " & FORMAT(MaxDate, "MMM YYYY")
-				    )
+				    VAR PrevPeriod = CALCULATE([Total Discount Applied CY], DATEADD('Business Dates'[Date], -1, MONTH))
+				    RETURN DIVIDE(CYValue - PrevPeriod, PrevPeriod, 0)
+				
+				VAR GrowthInsight = "Discounting is " & IF(YoYGrowth > 0, "higher", "lower") & " than the previous cycle. MOM trend shows a " & FORMAT(PeriodGrowth, "0.0%") & " shift."
+				
 				RETURN
 				"<!DOCTYPE html>
 				<html>
 				<head>
 				    <style>
 				        * { box-sizing: border-box; margin: 0; padding: 0; }
+				        body { font-family: 'Segoe UI', system-ui, sans-serif; background: transparent; height: 190px; width: 340px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+				        .card { width: 310px; height: 160px; position: relative; background: rgba(15, 23, 42, 0.9); border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 22px; color: white; transition: all 0.4s ease; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+				        .card:hover { transform: translateY(-3px); border-color: #F43F5E; }
+				        .content { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; }
+				        .label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94A3B8; font-weight: 600; }
+				        .main-value { font-size: 40px; font-weight: 200; letter-spacing: -1.5px; color: #F8FAFC; margin-top: 5px; }
+				        .currency { font-size: 20px; vertical-align: top; margin-right: 2px; color: #F43F5E; }
 				        
-				        body {
-				            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-				            background: transparent;
-				            overflow: hidden;
-				            width: 340px;
-				            height: 190px;
-				            perspective: 1000px;
-				        }
-				        .card-container {
-				            width: 100%;
-				            height: 100%;
-				            position: relative;
-				            transition: transform 0.6s;
-				            transform-style: preserve-3d;
-				        }
-				        body:hover .card-container {
-				            transform: rotateY(180deg);
-				        }
-				        .card-face {
-				            position: absolute;
-				            width: 100%;
-				            height: 100%;
-				            backface-visibility: hidden;
-				            border-radius: 12px;
-				            padding: 24px;
-				            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-				            display: flex;
-				            flex-direction: column;
-				        }
-				        .card-front {
-				            background: linear-gradient(135deg, #0F766E 0%, #14B8A6 100%);
-				            color: white;
-				        }
-				        .card-back {
-				            background: linear-gradient(135deg, #134E4A 0%, #0F766E 100%);
-				            color: white;
-				            transform: rotateY(180deg);
-				        }
-				        .card-header {
-				            display: flex;
-				            align-items: center;
-				            gap: 10px;
-				            margin-bottom: 16px;
-				        }
-				        .icon {
-				            font-size: 28px;
-				        }
-				        .card-label {
-				            font-size: 13px;
-				            font-weight: 600;
-				            letter-spacing: 0.5px;
-				            opacity: 0.95;
-				            text-transform: uppercase;
-				        }
-				        .main-value {
-				            font-size: 42px;
-				            font-weight: 800;
-				            line-height: 1;
-				            margin-bottom: 8px;
-				            letter-spacing: -0.02em;
-				        }
-				        .period-context {
-				            font-size: 12px;
-				            opacity: 0.85;
-				            margin-bottom: auto;
-				        }
-				        .footer-metrics {
-				            display: flex;
-				            gap: 16px;
-				            padding-top: 12px;
-				            border-top: 1px solid rgba(255,255,255,0.2);
-				        }
-				        .metric {
-				            flex: 1;
-				        }
-				        .metric-label {
-				            font-size: 9px;
-				            opacity: 0.75;
-				            margin-bottom: 3px;
-				            text-transform: uppercase;
-				            letter-spacing: 0.5px;
-				        }
-				        .metric-value {
-				            font-size: 15px;
-				            font-weight: 700;
-				        }
-				        .back-title {
-				            font-size: 11px;
-				            font-weight: 700;
-				            letter-spacing: 0.5px;
-				            opacity: 0.85;
-				            margin-bottom: 12px;
-				            text-transform: uppercase;
-				        }
-				        .insight-text {
-				            font-size: 11px;
-				            line-height: 1.6;
-				            opacity: 0.95;
-				            margin-bottom: auto;
-				        }
-				        .growth-positive { color: #A7F3D0; }
-				        .growth-negative { color: #FCA5A5; }
+				        .stats-footer { margin-top: auto; display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+				        .stat-item { display: flex; flex-direction: column; }
+				        .stat-label { font-size: 8px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;}
+				        .stat-val { font-size: 13px; font-weight: 600; }
+				        
+				        /* Inverted logic: Negative growth in discounts is GOOD (Green) */
+				        .growth-up { color: #34D399; } 
+				        .growth-down { color: #FB7185; }
+				        
+				        .insight-overlay { position: absolute; left: 0; right: 0; bottom: -100%; height: 100%; background: rgba(244, 63, 94, 0.95); display: flex; align-items: center; padding: 25px; font-size: 13px; color: #4C0519; font-weight: 600; transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10; backdrop-filter: blur(5px); }
+				        .card:hover .insight-overlay { bottom: 0; }
 				    </style>
 				</head>
 				<body>
-				    <div class='card-container'>
-				        <!-- FRONT -->
-				        <div class='card-face card-front'>
-				            <div class='card-header'>
-				                <div class='icon'>💰</div>
-				                <div class='card-label'>Total Revenue</div>
-				            </div>
-				            <div class='main-value'>" & FORMAT(Revenue / 1000000, "€0.0M") & "</div>
-				            <div class='period-context'>Total Sales (" & PeriodLabel & ")</div>
-				            <div class='footer-metrics'>
-				                <div class='metric'>
-				                    <div class='metric-label'>Period</div>
-				                    <div class='metric-value " & IF(PeriodGrowth >= 0, "growth-positive", "growth-negative") & "'>" & FORMAT(PeriodGrowth, "+0.0%;-0.0%") & "</div>
+				    <div class='card'>
+				        <div class='insight-overlay'><div><strong>Promo Insight:</strong><br>" & GrowthInsight & "</div></div>
+				        <div class='content'>
+				            <div class='label'>Discounts Applied</div>
+				            <div class='main-value'><span class='currency'>€</span>" & FORMAT(CYValue / 1000, "0.0") & "<span style='font-size:16px; color:#94A3B8'> K</span></div>
+				            <div class='stats-footer'>
+				                <div class='stat-item'>
+				                    <span class='stat-label'>YoY</span>
+				                    <span class='stat-val " & IF(YoYGrowth <= 0, "growth-up", "growth-down") & "'>" & FORMAT(YoYGrowth, "+0.0%;-0.0%;0.0%") & "</span>
 				                </div>
-				                <div class='metric'>
-				                    <div class='metric-label'>CAGR</div>
-				                    <div class='metric-value'>" & FORMAT(CAGR, "0.0%") & "</div>
+				                <div class='stat-item'>
+				                    <span class='stat-label'>MOM</span>
+				                    <span class='stat-val " & IF(PeriodGrowth <= 0, "growth-up", "growth-down") & "'>" & FORMAT(PeriodGrowth, "+0.0%;-0.0%;0.0%") & "</span>
 				                </div>
-				                <div class='metric'>
-				                    <div class='metric-label'>YoY</div>
-				                    <div class='metric-value " & IF(YoYGrowth >= 0, "growth-positive", "growth-negative") & "'>" & FORMAT(YoYGrowth, "+0.0%;-0.0%") & "</div>
-				                </div>
-				            </div>
-				        </div>
-				        
-				        <!-- BACK -->
-				        <div class='card-face card-back'>
-				            <div class='back-title'>💡 Revenue Analysis</div>
-				            <div class='insight-text'>" & GrowthInsight & "</div>
-				            <div class='footer-metrics'>
-				                <div class='metric'>
-				                    <div class='metric-label'>This Period</div>
-				                    <div class='metric-value'>" & FORMAT(Revenue, "€#,##0") & "</div>
-				                </div>
-				                <div class='metric'>
-				                    <div class='metric-label'>Prior Year</div>
-				                    <div class='metric-value'>" & FORMAT(PYRevenue, "€#,##0") & "</div>
+				                <div class='stat-item' style='text-align:right'>
+				                    <span class='stat-label'>Prior LY</span>
+				                    <span class='stat-val'>€" & FORMAT(PYValue / 1000, "0.0") & "K</span>
 				                </div>
 				            </div>
 				        </div>
 				    </div>
 				</body>
 				</html>"
+				
 				```
-			lineageTag: 007fdc8f-53af-4ff1-b6c3-dd9a307dc3fb
+			lineageTag: be66f641-939b-45e1-afb6-f008418800b1
 
