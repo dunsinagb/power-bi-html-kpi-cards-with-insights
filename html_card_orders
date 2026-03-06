@@ -1,0 +1,70 @@
+createOrReplace
+
+	ref table 'Dax Measures'
+
+		measure html_card_orders = ```
+				
+				VAR CYValue = [Total Order Qty CY]
+				VAR PYValue = [Total Order Qty LY]
+				VAR YoYGrowth = DIVIDE(CYValue - PYValue, PYValue, 0)
+				
+				-- MOM Calculation
+				VAR PeriodGrowth = 
+				    VAR PrevPeriod = CALCULATE([Total Order Qty CY], DATEADD('Business Dates'[Date], -1, MONTH))
+				    RETURN DIVIDE(CYValue - PrevPeriod, PrevPeriod, 0)
+				
+				VAR GrowthInsight = "Order volume shifted by " & FORMAT(YoYGrowth, "0.0%") & " YoY. MOM trend shows a " & FORMAT(PeriodGrowth, "0.0%") & " change."
+				
+				RETURN
+				"<!DOCTYPE html>
+				<html>
+				<head>
+				    <style>
+				        * { box-sizing: border-box; margin: 0; padding: 0; }
+				        body { font-family: 'Segoe UI', system-ui, sans-serif; background: transparent; height: 190px; width: 340px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+				        .card { width: 310px; height: 160px; position: relative; background: rgba(15, 23, 42, 0.9); border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 22px; color: white; transition: all 0.4s ease; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+				        .card:hover { transform: translateY(-3px); border-color: #F59E0B; }
+				        .content { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; }
+				        .label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94A3B8; font-weight: 600; }
+				        .main-value { font-size: 40px; font-weight: 200; letter-spacing: -1.5px; color: #F8FAFC; margin-top: 5px; }
+				        
+				        .stats-footer { margin-top: auto; display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+				        .stat-item { display: flex; flex-direction: column; }
+				        .stat-label { font-size: 8px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+				        .stat-val { font-size: 13px; font-weight: 600; }
+				        
+				        .growth-up { color: #FCD34D; }
+				        .growth-down { color: #FB7185; }
+				        
+				        .insight-overlay { position: absolute; left: 0; right: 0; bottom: -100%; height: 100%; background: rgba(245, 158, 11, 0.95); display: flex; align-items: center; padding: 25px; font-size: 13px; color: #451A03; font-weight: 600; transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10; backdrop-filter: blur(5px); }
+				        .card:hover .insight-overlay { bottom: 0; }
+				    </style>
+				</head>
+				<body>
+				    <div class='card'>
+				        <div class='insight-overlay'><div><strong>Logistics Insight:</strong><br>" & GrowthInsight & "</div></div>
+				        <div class='content'>
+				            <div class='label'>Total Orders</div>
+				            <div class='main-value'>" & FORMAT(CYValue, "#,##0") & "</div>
+				            <div class='stats-footer'>
+				                <div class='stat-item'>
+				                    <span class='stat-label'>YoY</span>
+				                    <span class='stat-val " & IF(YoYGrowth >= 0, "growth-up", "growth-down") & "'>" & FORMAT(YoYGrowth, "+0.0%;-0.0%;0.0%") & "</span>
+				                </div>
+				                <div class='stat-item'>
+				                    <span class='stat-label'>MOM</span>
+				                    <span class='stat-val " & IF(PeriodGrowth >= 0, "growth-up", "growth-down") & "'>" & FORMAT(PeriodGrowth, "+0.0%;-0.0%;0.0%") & "</span>
+				                </div>
+				                <div class='stat-item' style='text-align:right'>
+				                    <span class='stat-label'>Prior LY</span>
+				                    <span class='stat-val'>" & FORMAT(PYValue, "#,##0") & "</span>
+				                </div>
+				            </div>
+				        </div>
+				    </div>
+				</body>
+				</html>"
+				
+				```
+			lineageTag: cfbe9b82-24be-46c7-86f9-be294b50eef2
+
